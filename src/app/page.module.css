@@ -1,0 +1,113 @@
+.container {
+  max-width: 700px;
+  margin: 40px auto;
+  padding: 32px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.title {
+  font-size: 2.2rem;
+  font-weight: 700;
+  margin-bottom: 24px;
+  color: #1a202c;
+}
+.dropzone {
+  border: 2px dashed #3182ce;
+  border-radius: 10px;
+  padding: 32px 24px;
+  text-align: center;
+  color: #3182ce;
+  font-size: 1.1rem;
+  margin-bottom: 20px;
+  cursor: pointer;
+  width: 100%;
+  position: relative;
+}
+.fileInput {
+  opacity: 0;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  left: 0;
+  top: 0;
+  cursor: pointer;
+}
+.audioPlayerWrapper {
+  margin: 16px 0 8px 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+.audioPlayer {
+  width: 100%;
+  max-width: 400px;
+}
+.processBtn {
+  background: #3182ce;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 32px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 16px 0 24px 0;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.processBtn:disabled {
+  background: #b2c6e0;
+  cursor: not-allowed;
+}
+.feedbackSection {
+  width: 100%;
+  margin-top: 24px;
+  background: #f7fafc;
+  border-radius: 12px;
+  padding: 24px 16px;
+  box-shadow: 0 1px 8px rgba(49,130,206,0.07);
+}
+.scoresTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+}
+.scoresTable th, .scoresTable td {
+  border: 1px solid #cbd5e1;
+  padding: 8px 10px;
+  text-align: left;
+}
+.scoresTable th {
+  background: #e2e8f0;
+  font-weight: 600;
+}
+.textFields {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.textarea {
+  width: 320px;
+  min-height: 60px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  padding: 8px;
+  font-size: 1rem;
+  resize: vertical;
+  background: #fff;
+}
+@media (max-width: 600px) {
+  .container {
+    padding: 12px;
+  }
+  .textFields {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .textarea {
+    width: 100%;
+  }
+} 
