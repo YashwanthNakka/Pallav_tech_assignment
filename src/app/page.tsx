@@ -154,6 +154,32 @@ export default function Home() {
           </div>
         </div>
       )}
+      {feedback && (
+        <div className={styles.resultsContainer}>
+          <h2>Analysis Results</h2>
+          <div className={styles.resultsBox}>
+            <pre className={styles.jsonBox}>
+              {JSON.stringify({
+                scores: feedback.scores,
+                overallFeedback: feedback.overallFeedback,
+                observation: feedback.observation
+              }, null, 2)}
+            </pre>
+            <button 
+              className={styles.copyButton}
+              onClick={() => {
+                navigator.clipboard.writeText(JSON.stringify({
+                  scores: feedback.scores,
+                  overallFeedback: feedback.overallFeedback,
+                  observation: feedback.observation
+                }, null, 2));
+              }}
+            >
+              Copy Results
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

@@ -110,4 +110,48 @@
   .textarea {
     width: 100%;
   }
+}
+.resultsContainer {
+  margin-top: 2rem;
+  width: 100%;
+  max-width: 800px;
+}
+.resultsBox {
+  position: relative;
+  background: #1e1e1e;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+.jsonBox {
+  color: #d4d4d4;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  margin: 0;
+  padding: 1rem;
+  background: #1e1e1e;
+  border-radius: 4px;
+  overflow-x: auto;
+}
+.copyButton {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: #4a5568;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.copyButton:hover {
+  background: #2d3748;
+}
+.copyButton:active {
+  background: #1a202c;
 } 

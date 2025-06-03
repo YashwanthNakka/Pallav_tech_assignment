@@ -12,15 +12,25 @@ interface Utterance {
   transcript: string;
   start: number;
   end: number;
+  sentiment: string;
+  sentiment_score: number;
 }
 
 interface Sentiment {
-  overall: number;
+  sentiment: string;
+  sentiment_score: number;
 }
 
 interface Topic {
   topic: string;
-  confidence: number;
+  confidence_score: number;
+}
+
+interface TopicSegment {
+  text: string;
+  start_word: number;
+  end_word: number;
+  topics: Topic[];
 }
 
 interface Intent {
@@ -87,12 +97,23 @@ export async function POST(req: NextRequest) {
     }
 
     const data = await response.json();
+    console.log('Deepgram API Response:', JSON.stringify(data, null, 2));
+    
     const transcript = data.results?.channels[0]?.alternatives[0]?.transcript || "";
-    const utterances = data.results?.channels[0]?.alternatives[0]?.utterances || [];
-    const sentiment = data.results?.channels[0]?.alternatives[0]?.sentiment || {};
-    const topics = data.results?.channels[0]?.alternatives[0]?.topics || [];
-    const summary = data.results?.channels[0]?.alternatives[0]?.summarize || "";
-    const intents = data.results?.channels[0]?.alternatives[0]?.intents || [];
+    const utterances = data.results?.utterances || [];
+    const sentiment = data.results?.sentiments?.average || { sentiment: 'neutral', sentiment_score: 0 };
+    const topics = data.results?.topics?.segments?.flatMap((segment: TopicSegment) => segment.topics) || [];
+    const summary = data.results?.channels[0]?.alternatives[0]?.summaries?.[0]?.summary || "";
+    const intents = data.results?.intents?.segments || [];
+
+    console.log('Processed Data:', {
+      transcriptLength: transcript.length,
+      utterancesCount: utterances.length,
+      sentiment,
+      topics,
+      summary,
+      intents
+    });
 
     if (!transcript) {
       return NextResponse.json({ error: "Transcription failed" }, { status: 500 });
@@ -112,14 +133,37 @@ export async function POST(req: NextRequest) {
       fatalToneLanguage: analyzeToneLanguage(sentiment, utterances),
     };
 
+    console.log('Analysis Results:', {
+      scores,
+      sentiment,
+      topics
+    });
+
     const overallFeedback = generateOverallFeedback(scores, sentiment, summary);
     const observation = generateObservation(utterances, topics, sentiment);
 
-    return NextResponse.json({
+    console.log('Final Output:', {
+      overallFeedback,
+      observation
+    });
+
+    // Format the response as clean JSON
+    const responseData = {
       scores,
       overallFeedback,
       observation,
-      parameters // Include parameters in response for frontend reference
+      parameters: parameters.map(p => ({
+        name: p.name,
+        weight: p.weight,
+        description: p.desc,
+        type: p.inputType
+      }))
+    };
+
+    return NextResponse.json(responseData, {
+      headers: {
+        'Content-Type': 'application/json',
+      }
     });
   } catch (error) {
     console.error('Error:', error);
@@ -131,6 +175,10 @@ export async function POST(req: NextRequest) {
 function analyzeGreeting(utterances: Utterance[]): number {
   if (!utterances.length) return 0;
   const firstUtterance = utterances[0];
+  console.log('Greeting Analysis:', {
+    firstUtterance,
+    startTime: firstUtterance.start
+  });
   const greetingTime = firstUtterance.start;
   return greetingTime <= 5 ? 5 : 0;
 }
@@ -140,6 +188,9 @@ function analyzeUrgency(utterances: Utterance[]): number {
   const urgencyScore = utterances.reduce((score, utterance) => {
     const text = utterance.transcript.toLowerCase();
     const hasUrgency = urgencyKeywords.some(keyword => text.includes(keyword));
+    if (hasUrgency) {
+      console.log('Urgency found in:', text);
+    }
     return score + (hasUrgency ? 3 : 0);
   }, 0);
   return Math.min(15, urgencyScore);
@@ -150,28 +201,36 @@ function analyzeRebuttal(utterances: Utterance[]): number {
   const rebuttalScore = utterances.reduce((score, utterance) => {
     const text = utterance.transcript.toLowerCase();
     const hasObjection = objectionKeywords.some(keyword => text.includes(keyword));
+    if (hasObjection) {
+      console.log('Objection found in:', text);
+    }
     return score + (hasObjection ? 3 : 0);
   }, 0);
   return Math.min(15, rebuttalScore);
 }
 
 function analyzeEtiquette(sentiment: Sentiment): number {
+  console.log('Etiquette Analysis:', { sentiment });
   const baseScore = 10;
-  const sentimentScore = sentiment.overall > 0 ? 4 : 0;
+  const sentimentScore = sentiment.sentiment_score > 0 ? 4 : 0;
   return Math.min(15, baseScore + sentimentScore);
 }
 
 function analyzeDisclaimer(utterances: Utterance[]): number {
   const disclaimerKeywords = ['recording', 'recorded', 'tape', 'monitoring'];
-  const hasDisclaimer = utterances.some(utterance => 
-    disclaimerKeywords.some(keyword => 
-      utterance.transcript.toLowerCase().includes(keyword)
-    )
-  );
+  const hasDisclaimer = utterances.some(utterance => {
+    const text = utterance.transcript.toLowerCase();
+    const found = disclaimerKeywords.some(keyword => text.includes(keyword));
+    if (found) {
+      console.log('Disclaimer found in:', text);
+    }
+    return found;
+  });
   return hasDisclaimer ? 5 : 0;
 }
 
 function analyzeDisposition(utterances: Utterance[], intents: Intent[]): number {
+  console.log('Disposition Analysis:', { intents });
   const hasDisposition = intents.some(intent => 
     intent.intent === 'disposition' || intent.intent === 'category'
   );
@@ -185,36 +244,49 @@ function analyzeClosing(utterances: Utterance[]): number {
   const hasClosing = closingKeywords.some(keyword => 
     lastUtterance.transcript.toLowerCase().includes(keyword)
   );
+  if (hasClosing) {
+    console.log('Closing found in:', lastUtterance.transcript);
+  }
   return hasClosing ? 5 : 0;
 }
 
 function analyzeIdentification(utterances: Utterance[]): number {
   const idKeywords = ['name', 'id', 'account', 'customer'];
-  const hasIdentification = utterances.some(utterance => 
-    idKeywords.some(keyword => 
-      utterance.transcript.toLowerCase().includes(keyword)
-    )
-  );
+  const hasIdentification = utterances.some(utterance => {
+    const text = utterance.transcript.toLowerCase();
+    const found = idKeywords.some(keyword => text.includes(keyword));
+    if (found) {
+      console.log('Identification found in:', text);
+    }
+    return found;
+  });
   return hasIdentification ? 5 : 0;
 }
 
 function analyzeTapeDisclosure(utterances: Utterance[]): number {
   const disclosureKeywords = ['recording', 'recorded', 'tape', 'monitoring'];
-  const hasDisclosure = utterances.some(utterance => 
-    disclosureKeywords.some(keyword => 
-      utterance.transcript.toLowerCase().includes(keyword)
-    )
-  );
+  const hasDisclosure = utterances.some(utterance => {
+    const text = utterance.transcript.toLowerCase();
+    const found = disclosureKeywords.some(keyword => text.includes(keyword));
+    if (found) {
+      console.log('Tape disclosure found in:', text);
+    }
+    return found;
+  });
   return hasDisclosure ? 10 : 0;
 }
 
 function analyzeToneLanguage(sentiment: Sentiment, utterances: Utterance[]): number {
+  console.log('Tone Analysis:', { sentiment });
   const negativeKeywords = ['abuse', 'threat', 'angry', 'rude'];
-  const hasNegativeLanguage = utterances.some(utterance => 
-    negativeKeywords.some(keyword => 
-      utterance.transcript.toLowerCase().includes(keyword)
-    )
-  );
+  const hasNegativeLanguage = utterances.some(utterance => {
+    const text = utterance.transcript.toLowerCase();
+    const found = negativeKeywords.some(keyword => text.includes(keyword));
+    if (found) {
+      console.log('Negative language found in:', text);
+    }
+    return found;
+  });
   return hasNegativeLanguage ? 0 : 15;
 }
 
@@ -224,9 +296,13 @@ function generateOverallFeedback(scores: Record<string, number>, sentiment: Sent
   const percentage = (totalScore / maxScore) * 100;
   
   let feedback = `Overall score: ${percentage.toFixed(1)}%. `;
-  feedback += summary || "The call was processed successfully.";
+  if (summary) {
+    feedback += summary;
+  } else {
+    feedback += "The call was processed successfully.";
+  }
   
-  if (sentiment.overall < 0) {
+  if (sentiment.sentiment_score < 0) {
     feedback += " There were some negative sentiments detected.";
   }
   
@@ -240,8 +316,8 @@ function generateObservation(utterances: Utterance[], topics: Topic[], sentiment
     observations.push(`Main topics discussed: ${topics.map(t => t.topic).join(', ')}`);
   }
   
-  if (sentiment.overall !== 0) {
-    observations.push(`Overall sentiment was ${sentiment.overall > 0 ? 'positive' : 'negative'}`);
+  if (sentiment.sentiment_score !== 0) {
+    observations.push(`Overall sentiment was ${sentiment.sentiment_score > 0 ? 'positive' : 'negative'}`);
   }
   
   return observations.join('. ') || "No specific observations available.";
